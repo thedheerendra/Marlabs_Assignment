@@ -45,4 +45,4 @@ This Terraform Script can be further modulerized but since it's Serving a Partic
 
 Note: I have Considered Developers are Already Using VPN
 
-
+Azure Pipeline Yaml is Present in Root and Terraform Script in nomodule_terraform
