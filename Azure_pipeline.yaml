@@ -1,0 +1,102 @@
+trigger:
+  none  # Manual run only
+
+parameters:
+  - name: deployment_identifier
+    type: string
+    displayName: 'Unique identifier (e.g. devname, john123, ticketno,  ticket456)'
+
+variables:
+  tfVersion: '1.7.5'
+
+stages:
+
+  - stage: TerraformPlan
+    displayName: 'Terraform Plan Stage'
+    jobs:
+      - job: Plan
+        displayName: 'Plan Job'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+
+          - checkout: self
+
+          - script: |
+              echo "Installing Terraform manually..."
+              sudo apt-get update
+              sudo apt-get install -y wget unzip
+              wget https://releases.hashicorp.com/terraform/$(tfVersion)/terraform_$(tfVersion)_linux_amd64.zip
+              unzip terraform_$(tfVersion)_linux_amd64.zip
+              sudo mv terraform /usr/local/bin/
+              terraform version
+            displayName: 'Install Terraform'
+
+          - script: |
+              echo "Starting Terraform Init"
+              cd terraform
+              terraform init
+            displayName: 'Terraform Init'
+
+          - script: |
+              echo "Selecting or creating Terraform workspace"
+              cd terraform
+              terraform workspace list
+              terraform workspace select ${{ parameters.deployment_identifier }} || terraform workspace new ${{ parameters.deployment_identifier }}
+            displayName: 'Terraform Workspace Setup'
+
+          - script: |
+              echo "Running Terraform Plan for deployment_identifier: ${{ parameters.deployment_identifier }}"
+              cd terraform
+              terraform plan -out=tfplan -var="name_prefix=${{ parameters.deployment_identifier }}"
+            displayName: 'Terraform Plan Execution'
+
+
+  - stage: TerraformApply
+    displayName: 'Terraform Apply Stage'
+    dependsOn: TerraformPlan
+    condition: succeeded()
+    approval:
+      environment: 'DevEnv'  # Need to create env and set approvers for this particular env
+
+    jobs:
+      - job: Apply
+        displayName: 'Apply Job'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+
+          - checkout: self
+
+          - script: |
+              echo "Running Terraform Apply"
+              cd terraform
+              terraform init
+              terraform workspace select ${{ parameters.deployment_identifier }}
+              terraform apply -auto-approve tfplan
+            displayName: 'Terraform Apply Command'
+
+
+  - stage: TerraformDestroy
+    displayName: 'Terraform Destroy Stage'
+    dependsOn: TerraformApply
+    condition: succeeded()
+    approval:
+      environment: 'DevEnv'  
+
+    jobs:
+      - job: Destroy
+        displayName: 'Destroy Job'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+
+          - checkout: self
+
+          - script: |
+              echo "Running Terraform Destroy"
+              cd terraform
+              terraform init
+              terraform workspace select ${{ parameters.deployment_identifier }}
+              terraform destroy -auto-approve -var="name_prefix=${{ parameters.deployment_identifier }}"
+            displayName: 'Terraform Destroy Command'
