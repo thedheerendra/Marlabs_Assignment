@@ -39,6 +39,10 @@ Azure DevOps pipeline includes 3 stages:
 
 Plan ➡️ Approval Gate [Apply] ➡️ Approval Gate [Destroy]
 
+Terraform Plan Stage - This Stage will Show a Plan after Trigeering Pipeline
+TerraformApply - This Stage after Approval will Provision required Resources
+TerraformDestroy - This Stage after Approval will Destroy all Resources Provisioned Earlier
+
 - Developers trigger the pipeline with a unique `name_prefix` argument.
 - This prefix is used to:
   - Create isolated workspaces
@@ -77,6 +81,6 @@ Improvements & Notes
 
 - The current Terraform implementation is **non-modular**, optimized for simplicity and rapid developer onboarding.
 - Future improvements may include modularizing the scripts for better reusability and maintenance.
-
-
+- These are dry run files and have not been tested in actual cloud and follows self driven approaches.
+- Remote Backend is not Used here and can be Implemented.
 
